@@ -5,60 +5,62 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Not a Bot Brain</title>
 <style>
-  :root { color-scheme: light; }
+  :root { color-scheme: dark; }
   * { box-sizing: border-box; }
-  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; background:#f7f7f5; color:#1c1b1a; line-height:1.5; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; background:#0f1117; color:#e6e7ea; line-height:1.5; }
   .wrap { max-width:1080px; margin:0 auto; padding:28px 22px 80px; }
-  .kicker { font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#b4530a; font-weight:700; }
+  .kicker { font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#f0a23c; font-weight:700; }
   h1 { font-size:30px; margin:4px 0 2px; letter-spacing:-.02em; }
-  .sub { color:#6b6864; font-size:14px; }
-  .tagline { margin-top:12px; font-style:italic; color:#8a5a10; font-size:13.5px; border-left:3px solid #f0c98a; padding-left:10px; }
-  h2.sec { font-size:15px; text-transform:uppercase; letter-spacing:.08em; color:#8a8680; margin:34px 0 14px; font-weight:700; border-bottom:1px solid #e6e2db; padding-bottom:8px; }
+  .sub { color:#9aa1ad; font-size:14px; }
+  .tagline { margin-top:12px; font-style:italic; color:#e0b072; font-size:13.5px; border-left:3px solid #6b4a1e; padding-left:10px; }
+  h2.sec { font-size:15px; text-transform:uppercase; letter-spacing:.08em; color:#8b93a1; margin:34px 0 14px; font-weight:700; border-bottom:1px solid #2a2f3a; padding-bottom:8px; }
   .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px; }
-  .col { background:#fff; border:1px solid #e8e4dd; border-radius:14px; padding:16px 16px 6px; }
+  .col { background:#1a1d24; border:1px solid #2a2f3a; border-radius:14px; padding:16px 16px 6px; }
   .col h3 { margin:0 0 4px; font-size:15px; display:flex; align-items:center; gap:8px; }
   .dot { width:9px; height:9px; border-radius:50%; display:inline-block; }
-  .c-prod .dot{background:#2f74d0;} .c-biz .dot{background:#178a5a;} .c-cult .dot{background:#b4530a;}
-  .col .coltag { font-size:11px; color:#9a958e; margin-bottom:12px; }
-  .item { padding:11px 0; border-top:1px solid #f0ece5; } .item:first-of-type{border-top:none;}
+  .c-prod .dot{background:#4f93e8;} .c-biz .dot{background:#2bbd7e;} .c-cult .dot{background:#e8893f;}
+  .col .coltag { font-size:11px; color:#7c828d; margin-bottom:12px; }
+  .item { padding:11px 0; border-top:1px solid #23272f; } .item:first-of-type{border-top:none;}
   .item .t { font-weight:650; font-size:14px; }
-  .item .d { font-size:13px; color:#56524d; margin:3px 0 6px; }
-  .angle { font-size:12.5px; color:#7a4a12; background:#fbf3e7; border-radius:8px; padding:6px 9px; margin:6px 0; } .angle b{color:#9a5a10;}
-  .src a { font-size:12px; color:#2f74d0; text-decoration:none; } .src a:hover{text-decoration:underline;}
-  .seedbtn { font-size:12px; color:#2f74d0; background:none; border:none; cursor:pointer; padding:0; }
-  .covered { font-size:11.5px; color:#7a4a12; background:#f4efe6; border:1px dashed #d9c9ac; border-radius:7px; padding:5px 8px; margin-top:7px; } .covered b{color:#9a5a10;}
+  .item .d { font-size:13px; color:#b6bcc6; margin:3px 0 6px; }
+  .angle { font-size:12.5px; color:#e9c79a; background:#241d12; border-radius:8px; padding:6px 9px; margin:6px 0; } .angle b{color:#f0b87a;}
+  .src a { font-size:12px; color:#6aa8f0; text-decoration:none; } .src a:hover{text-decoration:underline;}
+  .seedbtn { font-size:12px; color:#6aa8f0; background:none; border:none; cursor:pointer; padding:0; }
+  .covered { font-size:11.5px; color:#e3c79a; background:#221d14; border:1px dashed #5a4a2e; border-radius:7px; padding:5px 8px; margin-top:7px; } .covered b{color:#f0b87a;}
   .addrow { display:flex; gap:8px; flex-wrap:wrap; margin:6px 0 16px; }
-  .addrow input { flex:1; min-width:220px; padding:10px 12px; border:1px solid #d8d3ca; border-radius:10px; font-size:14px; background:#fff; }
-  .addrow select { padding:10px; border:1px solid #d8d3ca; border-radius:10px; font-size:13px; background:#fff; }
-  .btn { padding:10px 16px; border:none; border-radius:10px; background:#1c1b1a; color:#fff; font-weight:600; font-size:14px; cursor:pointer; } .btn:hover{background:#3a3733;}
-  .btn.ghost{ background:#efece7; color:#1c1b1a; }
+  .addrow input { flex:1; min-width:220px; padding:10px 12px; border:1px solid #333a45; border-radius:10px; font-size:14px; background:#14161c; color:#e6e7ea; }
+  .addrow select { padding:10px; border:1px solid #333a45; border-radius:10px; font-size:13px; background:#14161c; color:#e6e7ea; }
+  input, textarea, select { color:#e6e7ea; }
+  input::placeholder, textarea::placeholder { color:#6c7280; }
+  .btn { padding:10px 16px; border:none; border-radius:10px; background:#e6e7ea; color:#14161c; font-weight:600; font-size:14px; cursor:pointer; } .btn:hover{background:#ffffff;}
+  .btn.ghost{ background:#262b34; color:#e6e7ea; }
   .filters { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
-  .chip { font-size:12.5px; padding:5px 11px; border-radius:999px; border:1px solid #ddd8d0; background:#fff; cursor:pointer; color:#56524d; } .chip.on{background:#1c1b1a;color:#fff;border-color:#1c1b1a;}
-  .idea { background:#fff; border:1px solid #e8e4dd; border-radius:12px; padding:12px 14px; margin-bottom:10px; display:flex; gap:12px; align-items:flex-start; }
+  .chip { font-size:12.5px; padding:5px 11px; border-radius:999px; border:1px solid #333a45; background:#14161c; cursor:pointer; color:#b6bcc6; } .chip.on{background:#e6e7ea;color:#14161c;border-color:#e6e7ea;}
+  .idea { background:#1a1d24; border:1px solid #2a2f3a; border-radius:12px; padding:12px 14px; margin-bottom:10px; display:flex; gap:12px; align-items:flex-start; }
   .idea .body { flex:1; }
   .idea .titlerow { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
   .idea .ttl { font-weight:650; font-size:14.5px; }
-  .idea textarea, .idea input.edit { width:100%; border:1px solid #d8d3ca; border-radius:8px; padding:8px; font-size:13.5px; font-family:inherit; }
+  .idea textarea, .idea input.edit { width:100%; border:1px solid #333a45; border-radius:8px; padding:8px; font-size:13.5px; font-family:inherit; background:#14161c; color:#e6e7ea; }
   .tag { font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; font-weight:700; padding:2px 8px; border-radius:999px; }
-  .tag.prod{background:#e4eefb;color:#2f74d0;} .tag.biz{background:#e2f3ea;color:#178a5a;} .tag.cult{background:#fbeede;color:#b4530a;} .tag.other{background:#eee;color:#777;}
-  .status { font-size:11px; padding:2px 8px; border-radius:999px; cursor:pointer; border:1px solid #ddd; background:#fafafa; }
-  .status.idea{color:#888;} .status.queued,.status.setlist{color:#2f74d0;border-color:#bcd6f5;background:#f2f7fe;} .status.recorded,.status.covered{color:#178a5a;border-color:#bfe4cf;background:#f1faf4;}
+  .tag.prod{background:#17314f;color:#8fc0f7;} .tag.biz{background:#143a2a;color:#6fdca9;} .tag.cult{background:#3a2a14;color:#f0b87a;} .tag.other{background:#2a2f3a;color:#aab1bd;}
+  .status { font-size:11px; padding:2px 8px; border-radius:999px; cursor:pointer; border:1px solid #333a45; background:#14161c; }
+  .status.idea{color:#9aa1ad;} .status.queued,.status.setlist{color:#8fc0f7;border-color:#2a4a72;background:#15233a;} .status.recorded,.status.covered{color:#6fdca9;border-color:#1f5540;background:#123026;}
   .iconbtn[disabled]{opacity:.25;cursor:default;}
-  .note { font-size:13px; color:#56524d; margin-top:6px; white-space:pre-wrap; }
-  .iconbtn { background:none; border:none; cursor:pointer; color:#a39e96; font-size:13px; padding:2px 4px; } .iconbtn:hover{color:#c0392b;}
-  .empty { color:#9a958e; font-size:13.5px; text-align:center; padding:24px; border:1px dashed #ddd8d0; border-radius:12px; }
-  footer { margin-top:40px; font-size:12px; color:#a39e96; text-align:center; }
+  .note { font-size:13px; color:#b6bcc6; margin-top:6px; white-space:pre-wrap; }
+  .iconbtn { background:none; border:none; cursor:pointer; color:#7c828d; font-size:13px; padding:2px 4px; } .iconbtn:hover{color:#ff6b5e;}
+  .empty { color:#8b93a1; font-size:13.5px; text-align:center; padding:24px; border:1px dashed #333a45; border-radius:12px; }
+  footer { margin-top:40px; font-size:12px; color:#6c7280; text-align:center; }
   /* auth + status bar */
-  #statusBar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; background:#fff; border:1px solid #e8e4dd; border-radius:12px; padding:10px 14px; margin-top:16px; }
-  .live { display:inline-flex; align-items:center; gap:6px; font-size:12.5px; color:#178a5a; font-weight:600; }
+  #statusBar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; background:#1a1d24; border:1px solid #2a2f3a; border-radius:12px; padding:10px 14px; margin-top:16px; }
+  .live { display:inline-flex; align-items:center; gap:6px; font-size:12.5px; color:#2bbd7e; font-weight:600; }
   .live .pulse { width:8px; height:8px; border-radius:50%; background:#1fa463; box-shadow:0 0 0 0 rgba(31,164,99,.6); animation:pulse 1.8s infinite; }
   @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(31,164,99,.5);} 70%{box-shadow:0 0 0 7px rgba(31,164,99,0);} 100%{box-shadow:0 0 0 0 rgba(31,164,99,0);} }
   /* login gate */
-  #gate { position:fixed; inset:0; background:#f7f7f5; display:flex; align-items:center; justify-content:center; z-index:50; }
-  .login { background:#fff; border:1px solid #e8e4dd; border-radius:16px; padding:32px; width:min(420px,92vw); text-align:center; box-shadow:0 8px 30px rgba(0,0,0,.06); }
+  #gate { position:fixed; inset:0; background:#0f1117; display:flex; align-items:center; justify-content:center; z-index:50; }
+  .login { background:#1a1d24; border:1px solid #2a2f3a; border-radius:16px; padding:32px; width:min(420px,92vw); text-align:center; box-shadow:0 8px 30px rgba(0,0,0,.4); }
   .login h1 { font-size:24px; }
-  .login input { width:100%; padding:12px 14px; border:1px solid #d8d3ca; border-radius:10px; font-size:15px; margin:14px 0; }
-  .login .msg { font-size:13px; color:#6b6864; margin-top:12px; min-height:18px; }
+  .login input { width:100%; padding:12px 14px; border:1px solid #333a45; border-radius:10px; font-size:15px; margin:14px 0; background:#14161c; color:#e6e7ea; }
+  .login .msg { font-size:13px; color:#9aa1ad; margin-top:12px; min-height:18px; }
   .hide { display:none !important; }
 </style>
 </head>
