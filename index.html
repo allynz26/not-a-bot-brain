@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Not a Bot Brain</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; background:#f7f7f5; color:#1c1b1a; line-height:1.5; }
+  .wrap { max-width:1080px; margin:0 auto; padding:28px 22px 80px; }
+  .kicker { font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#b4530a; font-weight:700; }
+  h1 { font-size:30px; margin:4px 0 2px; letter-spacing:-.02em; }
+  .sub { color:#6b6864; font-size:14px; }
+  .tagline { margin-top:12px; font-style:italic; color:#8a5a10; font-size:13.5px; border-left:3px solid #f0c98a; padding-left:10px; }
+  h2.sec { font-size:15px; text-transform:uppercase; letter-spacing:.08em; color:#8a8680; margin:34px 0 14px; font-weight:700; border-bottom:1px solid #e6e2db; padding-bottom:8px; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px; }
+  .col { background:#fff; border:1px solid #e8e4dd; border-radius:14px; padding:16px 16px 6px; }
+  .col h3 { margin:0 0 4px; font-size:15px; display:flex; align-items:center; gap:8px; }
+  .dot { width:9px; height:9px; border-radius:50%; display:inline-block; }
+  .c-prod .dot{background:#2f74d0;} .c-biz .dot{background:#178a5a;} .c-cult .dot{background:#b4530a;}
+  .col .coltag { font-size:11px; color:#9a958e; margin-bottom:12px; }
+  .item { padding:11px 0; border-top:1px solid #f0ece5; } .item:first-of-type{border-top:none;}
+  .item .t { font-weight:650; font-size:14px; }
+  .item .d { font-size:13px; color:#56524d; margin:3px 0 6px; }
+  .angle { font-size:12.5px; color:#7a4a12; background:#fbf3e7; border-radius:8px; padding:6px 9px; margin:6px 0; } .angle b{color:#9a5a10;}
+  .src a { font-size:12px; color:#2f74d0; text-decoration:none; } .src a:hover{text-decoration:underline;}
+  .seedbtn { font-size:12px; color:#2f74d0; background:none; border:none; cursor:pointer; padding:0; }
+  .covered { font-size:11.5px; color:#7a4a12; background:#f4efe6; border:1px dashed #d9c9ac; border-radius:7px; padding:5px 8px; margin-top:7px; } .covered b{color:#9a5a10;}
+  .addrow { display:flex; gap:8px; flex-wrap:wrap; margin:6px 0 16px; }
+  .addrow input { flex:1; min-width:220px; padding:10px 12px; border:1px solid #d8d3ca; border-radius:10px; font-size:14px; background:#fff; }
+  .addrow select { padding:10px; border:1px solid #d8d3ca; border-radius:10px; font-size:13px; background:#fff; }
+  .btn { padding:10px 16px; border:none; border-radius:10px; background:#1c1b1a; color:#fff; font-weight:600; font-size:14px; cursor:pointer; } .btn:hover{background:#3a3733;}
+  .btn.ghost{ background:#efece7; color:#1c1b1a; }
+  .filters { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+  .chip { font-size:12.5px; padding:5px 11px; border-radius:999px; border:1px solid #ddd8d0; background:#fff; cursor:pointer; color:#56524d; } .chip.on{background:#1c1b1a;color:#fff;border-color:#1c1b1a;}
+  .idea { background:#fff; border:1px solid #e8e4dd; border-radius:12px; padding:12px 14px; margin-bottom:10px; display:flex; gap:12px; align-items:flex-start; }
+  .idea .body { flex:1; }
+  .idea .titlerow { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .idea .ttl { font-weight:650; font-size:14.5px; }
+  .idea textarea, .idea input.edit { width:100%; border:1px solid #d8d3ca; border-radius:8px; padding:8px; font-size:13.5px; font-family:inherit; }
+  .tag { font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; font-weight:700; padding:2px 8px; border-radius:999px; }
+  .tag.prod{background:#e4eefb;color:#2f74d0;} .tag.biz{background:#e2f3ea;color:#178a5a;} .tag.cult{background:#fbeede;color:#b4530a;} .tag.other{background:#eee;color:#777;}
+  .status { font-size:11px; padding:2px 8px; border-radius:999px; cursor:pointer; border:1px solid #ddd; background:#fafafa; }
+  .status.idea{color:#888;} .status.queued{color:#2f74d0;border-color:#bcd6f5;background:#f2f7fe;} .status.recorded{color:#178a5a;border-color:#bfe4cf;background:#f1faf4;}
+  .note { font-size:13px; color:#56524d; margin-top:6px; white-space:pre-wrap; }
+  .iconbtn { background:none; border:none; cursor:pointer; color:#a39e96; font-size:13px; padding:2px 4px; } .iconbtn:hover{color:#c0392b;}
+  .empty { color:#9a958e; font-size:13.5px; text-align:center; padding:24px; border:1px dashed #ddd8d0; border-radius:12px; }
+  footer { margin-top:40px; font-size:12px; color:#a39e96; text-align:center; }
+  /* auth + status bar */
+  #statusBar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; background:#fff; border:1px solid #e8e4dd; border-radius:12px; padding:10px 14px; margin-top:16px; }
+  .live { display:inline-flex; align-items:center; gap:6px; font-size:12.5px; color:#178a5a; font-weight:600; }
+  .live .pulse { width:8px; height:8px; border-radius:50%; background:#1fa463; box-shadow:0 0 0 0 rgba(31,164,99,.6); animation:pulse 1.8s infinite; }
+  @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(31,164,99,.5);} 70%{box-shadow:0 0 0 7px rgba(31,164,99,0);} 100%{box-shadow:0 0 0 0 rgba(31,164,99,0);} }
+  /* login gate */
+  #gate { position:fixed; inset:0; background:#f7f7f5; display:flex; align-items:center; justify-content:center; z-index:50; }
+  .login { background:#fff; border:1px solid #e8e4dd; border-radius:16px; padding:32px; width:min(420px,92vw); text-align:center; box-shadow:0 8px 30px rgba(0,0,0,.06); }
+  .login h1 { font-size:24px; }
+  .login input { width:100%; padding:12px 14px; border:1px solid #d8d3ca; border-radius:10px; font-size:15px; margin:14px 0; }
+  .login .msg { font-size:13px; color:#6b6864; margin-top:12px; min-height:18px; }
+  .hide { display:none !important; }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="login">
+    <div class="kicker">Not a Bot? The Podcast</div>
+    <h1>The Brain 🧠</h1>
+    <p class="sub">Private to Zane &amp; Greg. Enter your email and we'll send a one-tap login link.</p>
+    <input id="loginEmail" type="email" placeholder="you@example.com" autocomplete="email" />
+    <button class="btn" id="loginBtn" style="width:100%;">Send magic link</button>
+    <div class="msg" id="loginMsg"></div>
+  </div>
+</div>
+
+<div class="wrap hide" id="app">
+  <header>
+    <div class="kicker">Not a Bot? The Podcast · Zane &amp; Greg · two-host debate</div>
+    <h1>Not a Bot Brain 🧠</h1>
+    <div class="sub">Weekly AI pulse · episode backlog · show memory · your voice — shared &amp; live.</div>
+    <div class="tagline">"Technology and life at the human/machine boundary."</div>
+  </header>
+
+  <div id="statusBar">
+    <span class="live"><span class="pulse"></span> Live</span>
+    <span id="weekLabel" style="font-size:12.5px;color:#8a8680;">Week of —</span>
+    <button class="btn ghost" id="importBtn" type="button" style="padding:7px 12px;font-size:12.5px;">⤓ Import old data</button>
+    <span style="margin-left:auto;font-size:12.5px;color:#8a8680;">Signed in as <b id="who">—</b></span>
+    <button class="btn ghost" id="signOut" type="button" style="padding:7px 12px;font-size:12.5px;">Sign out</button>
+  </div>
+
+  <h2 class="sec">This week in AI — talking points</h2>
+  <div class="cards" id="roundup"></div>
+  <div style="font-size:11.5px;color:#a39e96;margin-top:6px;">Items are research leads — verify before you riff on air.</div>
+
+  <h2 class="sec">Episode topic backlog</h2>
+  <div class="addrow">
+    <input id="newTitle" type="text" placeholder="New episode idea or hot take…" />
+    <select id="newCat">
+      <option value="prod">Products &amp; Tools</option>
+      <option value="biz">Business &amp; Policy</option>
+      <option value="cult">Culture &amp; Impact</option>
+      <option value="other">Other</option>
+    </select>
+    <button class="btn" id="addBtn" type="button">Add</button>
+  </div>
+  <div class="filters" id="filters">
+    <span class="chip on" data-f="all">All</span>
+    <span class="chip" data-f="idea">💡 Ideas</span>
+    <span class="chip" data-f="queued">🎙️ Queued</span>
+    <span class="chip" data-f="recorded">✅ Recorded</span>
+  </div>
+  <div id="list"></div>
+
+  <h2 class="sec">Episode archive — what we've covered</h2>
+  <div style="background:#fff;border:1px solid #e8e4dd;border-radius:12px;padding:14px;margin-bottom:16px;">
+    <input id="epTitle" type="text" placeholder="Episode title" style="width:100%;padding:10px 12px;border:1px solid #d8d3ca;border-radius:10px;font-size:14px;margin-bottom:8px;" />
+    <input id="epTopics" type="text" placeholder="Topics (comma-separated)" style="width:100%;padding:10px 12px;border:1px solid #d8d3ca;border-radius:10px;font-size:13.5px;margin-bottom:8px;" />
+    <textarea id="epNotes" rows="3" placeholder="Summary / what you discussed…" style="width:100%;border:1px solid #d8d3ca;border-radius:10px;padding:10px;font-size:13.5px;font-family:inherit;"></textarea>
+    <div style="margin-top:8px;"><button class="btn" id="epAdd" type="button">Add episode</button></div>
+  </div>
+  <div id="epList"></div>
+
+  <h2 class="sec">My voice — thoughts &amp; positions</h2>
+  <div class="addrow">
+    <input id="thoughtInput" type="text" placeholder="A take, a belief, a question, a one-liner…" />
+    <select id="thoughtKind">
+      <option value="take">🔥 Hot take</option>
+      <option value="belief">🧭 Core belief</option>
+      <option value="question">❓ Open question</option>
+      <option value="story">📖 Story / example</option>
+      <option value="line">🎤 One-liner</option>
+    </select>
+    <button class="btn" id="thoughtAdd" type="button">Save</button>
+  </div>
+  <div class="filters" id="voiceFilters">
+    <span class="chip on" data-vf="all">All</span>
+    <span class="chip" data-vf="take">🔥 Takes</span>
+    <span class="chip" data-vf="belief">🧭 Beliefs</span>
+    <span class="chip" data-vf="question">❓ Questions</span>
+    <span class="chip" data-vf="story">📖 Stories</span>
+    <span class="chip" data-vf="line">🎤 Lines</span>
+  </div>
+  <div id="voiceList"></div>
+
+  <footer>Not a Bot Brain · Supabase + GitHub Pages · realtime, shared by Zane &amp; Greg</footer>
+</div>
+
+<script src="config.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>
