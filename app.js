@@ -120,8 +120,8 @@ function renderRoundup() {
 }
 
 // ---------- Backlog ----------
-const STATUS_CYCLE = { idea: "queued", queued: "recorded", recorded: "idea" };
-const STATUS_LABEL = { idea: "💡 idea", queued: "🎙️ queued", recorded: "✅ recorded" };
+const STATUS_CYCLE = { idea: "setlist", setlist: "covered", covered: "idea", queued: "setlist", recorded: "covered" };
+const STATUS_LABEL = { idea: "💡 idea", setlist: "🎙️ set list", covered: "✅ covered", queued: "🎙️ set list", recorded: "✅ covered" };
 const CAT_LABEL = { prod: "Products", biz: "Business", cult: "Culture", other: "Other" };
 
 async function addIdea(title, cat, note) {
@@ -135,24 +135,40 @@ async function deleteRow(table, id, localArr, rerender) {
   const idx = localArr.findIndex(i => i.id === id); if (idx > -1) localArr.splice(idx, 1); rerender();
   await sb.from(table).delete().eq("id", id);
 }
+function normStatus(s) { return s === "queued" ? "setlist" : s === "recorded" ? "covered" : (s || "idea"); }
+async function moveToSetList(x) {
+  const maxPos = backlog.filter(i => normStatus(i.status) === "setlist").reduce((m, i) => Math.max(m, i.position || 0), 0);
+  await updateIdea(x, { status: "setlist", position: maxPos + 1 });
+}
+
 function render() {
   const list = $("list"); list.innerHTML = "";
-  const shown = backlog.filter(x => filter === "all" || x.status === filter);
-  if (!shown.length) { list.innerHTML = `<div class="empty">No ideas yet${filter !== "all" ? " in this view" : ""}. Add one above, or pull from this week's angles ↑</div>`; return; }
+  const shown = backlog.filter(x => filter === "all" || normStatus(x.status) === filter);
+  if (!shown.length) { list.innerHTML = `<div class="empty">No ideas yet${filter !== "all" ? " in this view" : ""}. Add one above, or pull from this week's angles ↑</div>`; renderSetList(); return; }
   shown.forEach(x => {
+    const st = normStatus(x.status);
     const row = document.createElement("div"); row.className = "idea";
+    const quick = st === "idea"
+      ? `<button class="btn ghost" data-act="toset" style="padding:5px 10px;font-size:12px;">🎙️ Set list</button>`
+      : st === "setlist"
+      ? `<button class="btn ghost" data-act="covered" style="padding:5px 10px;font-size:12px;">✅ Covered</button>`
+      : `<button class="btn ghost" data-act="toidea" style="padding:5px 10px;font-size:12px;">↩ Idea</button>`;
     row.innerHTML = `
       <div class="body">
         <div class="titlerow">
           <span class="tag ${x.cat}">${CAT_LABEL[x.cat] || "Other"}</span>
-          <span class="status ${x.status}" data-act="status">${STATUS_LABEL[x.status]}</span>
+          <span class="status ${st}" data-act="status">${STATUS_LABEL[st]}</span>
           <span class="ttl">${esc(x.title)}</span>
         </div>
         ${x.note ? `<div class="note">${esc(x.note)}</div>` : ``}
       </div>
+      ${quick}
       <button class="iconbtn" data-act="edit" title="Edit">✎</button>
       <button class="iconbtn" data-act="del" title="Delete">✕</button>`;
-    row.querySelector('[data-act="status"]').onclick = () => updateIdea(x, { status: STATUS_CYCLE[x.status] });
+    row.querySelector('[data-act="status"]').onclick = () => updateIdea(x, { status: STATUS_CYCLE[st] });
+    const qt = row.querySelector('[data-act="toset"]'); if (qt) qt.onclick = () => moveToSetList(x);
+    const qc = row.querySelector('[data-act="covered"]'); if (qc) qc.onclick = () => updateIdea(x, { status: "covered" });
+    const qi = row.querySelector('[data-act="toidea"]'); if (qi) qi.onclick = () => updateIdea(x, { status: "idea" });
     row.querySelector('[data-act="del"]').onclick = () => { if (confirm("Delete this idea?")) deleteRow("backlog", x.id, backlog, render); };
     row.querySelector('[data-act="edit"]').onclick = () => {
       const body = row.querySelector(".body");
@@ -163,10 +179,74 @@ function render() {
     };
     list.appendChild(row);
   });
+  renderSetList();
+}
+
+// ---------- Next Episode set list ----------
+function setListItems() {
+  return backlog.filter(x => normStatus(x.status) === "setlist")
+    .sort((a, b) => (a.position || 0) - (b.position || 0));
+}
+async function reorderSetList(x, dir) {
+  const items = setListItems();
+  const i = items.findIndex(it => it.id === x.id);
+  const j = i + dir;
+  if (j < 0 || j >= items.length) return;
+  const a = items[i], b = items[j];
+  const ap = a.position || 0, bp = b.position || 0;
+  a.position = bp; b.position = ap;
+  renderSetList();
+  await sb.from("backlog").update({ position: a.position, updated_at: new Date().toISOString() }).eq("id", a.id);
+  await sb.from("backlog").update({ position: b.position, updated_at: new Date().toISOString() }).eq("id", b.id);
+}
+function renderSetList() {
+  const host = $("setList"); if (!host) return;
+  const items = setListItems();
+  $("setCount").textContent = items.length ? `${items.length} item${items.length > 1 ? "s" : ""}` : "";
+  if (!items.length) { host.innerHTML = `<div class="empty">Set list is empty. Tap "🎙️ Set list" on an idea above to add it here.</div>`; return; }
+  host.innerHTML = "";
+  items.forEach((x, idx) => {
+    const row = document.createElement("div"); row.className = "idea";
+    row.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:2px;margin-right:4px;">
+        <button class="iconbtn" data-act="up" title="Move up" ${idx === 0 ? "disabled" : ""}>▲</button>
+        <button class="iconbtn" data-act="down" title="Move down" ${idx === items.length - 1 ? "disabled" : ""}>▼</button>
+      </div>
+      <div class="body">
+        <div class="titlerow">
+          <span class="tag ${x.cat}">${CAT_LABEL[x.cat] || "Other"}</span>
+          <span class="ttl">${esc(x.title)}</span>
+        </div>
+        ${x.note ? `<div class="note">${esc(x.note)}</div>` : ``}
+      </div>
+      <button class="btn ghost" data-act="covered" style="padding:5px 10px;font-size:12px;">✅ Covered</button>
+      <button class="iconbtn" data-act="toidea" title="Back to ideas">↩</button>`;
+    row.querySelector('[data-act="up"]').onclick = () => reorderSetList(x, -1);
+    row.querySelector('[data-act="down"]').onclick = () => reorderSetList(x, 1);
+    row.querySelector('[data-act="covered"]').onclick = () => updateIdea(x, { status: "covered" });
+    row.querySelector('[data-act="toidea"]').onclick = () => updateIdea(x, { status: "idea" });
+    host.appendChild(row);
+  });
+}
+async function wrapEpisode() {
+  const items = setListItems();
+  if (!items.length) { alert("Your set list is empty — add some ideas first."); return; }
+  const title = prompt("Episode title for the archive:", "");
+  if (title === null) return;
+  const topics = items.map(i => i.title);
+  const notes = "Set list: " + items.map(i => i.title).join(" · ");
+  const ep = { id: uid(), title: title.trim() || "Untitled episode", topics, notes, ep_date: "" };
+  episodes.unshift({ ...ep, created_at: new Date().toISOString() }); renderE();
+  await sb.from("episodes").insert(ep);
+  for (const x of items) { x.status = "covered"; }
+  renderSetList(); render();
+  await sb.from("backlog").update({ status: "covered", updated_at: new Date().toISOString() }).in("id", items.map(i => i.id));
+  alert(`Wrapped "${ep.title}" → added to your Episode archive with ${items.length} topic${items.length > 1 ? "s" : ""}.`);
 }
 $("addBtn").onclick = () => { addIdea($("newTitle").value, $("newCat").value, ""); $("newTitle").value = ""; };
 $("newTitle").addEventListener("keydown", e => { if (e.key === "Enter") $("addBtn").click(); });
 document.querySelectorAll("#filters .chip").forEach(c => c.onclick = () => { document.querySelectorAll("#filters .chip").forEach(z => z.classList.remove("on")); c.classList.add("on"); filter = c.dataset.f; render(); });
+$("wrapBtn").onclick = wrapEpisode;
 
 // ---------- Voice ----------
 const VKIND = { take: { label: "🔥 Hot take", cls: "cult" }, belief: { label: "🧭 Core belief", cls: "biz" }, question: { label: "❓ Open question", cls: "prod" }, story: { label: "📖 Story", cls: "other" }, line: { label: "🎤 One-liner", cls: "cult" } };
