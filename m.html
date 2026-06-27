@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Bot Brain — Capture</title>
+<meta name="theme-color" content="#0f1117" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Bot Brain" />
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; background:#0f1117; color:#e6e7ea; line-height:1.5; }
+  .wrap { max-width:560px; margin:0 auto; padding:18px 14px calc(40px + env(safe-area-inset-bottom)); }
+  .kicker { font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:#f0a23c; font-weight:700; }
+  h1 { font-size:22px; margin:4px 0 2px; }
+  .sub { color:#9aa1ad; font-size:13px; }
+  .card { background:#1a1d24; border:1px solid #2a2f3a; border-radius:14px; padding:14px; margin:14px 0; }
+  label { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:#8b93a1; font-weight:700; display:block; margin:10px 0 4px; }
+  input, textarea, select { width:100%; padding:12px; border:1px solid #333a45; border-radius:10px; font-size:16px; background:#14161c; color:#e6e7ea; font-family:inherit; }
+  input::placeholder, textarea::placeholder { color:#6c7280; }
+  .row2 { display:flex; gap:8px; margin-top:12px; }
+  .btn { flex:1; padding:13px; border:none; border-radius:10px; font-weight:700; font-size:15px; cursor:pointer; }
+  .btn.primary { background:#e6e7ea; color:#14161c; }
+  .btn.ghost { background:#262b34; color:#e6e7ea; }
+  h2 { font-size:13px; text-transform:uppercase; letter-spacing:.07em; color:#8b93a1; margin:22px 0 8px; border-bottom:1px solid #2a2f3a; padding-bottom:6px; }
+  .arc-title { font-weight:700; font-size:16px; }
+  .arc-body { font-size:14px; color:#cdd2da; white-space:pre-wrap; margin-top:4px; }
+  .setitem { background:#1a1d24; border:1px solid #2a2f3a; border-radius:10px; padding:10px 12px; margin-bottom:8px; }
+  .setitem .t { font-weight:650; font-size:14.5px; }
+  .setitem .n { font-size:13px; color:#b6bcc6; white-space:pre-wrap; margin-top:3px; }
+  .muted { color:#8b93a1; font-size:13px; }
+  .toast { position:fixed; left:50%; bottom:20px; transform:translateX(-50%); background:#178a5a; color:#fff; padding:10px 18px; border-radius:999px; font-size:14px; font-weight:600; opacity:0; transition:opacity .2s; pointer-events:none; }
+  .toast.show { opacity:1; }
+  .topbar { display:flex; align-items:center; gap:10px; }
+  .topbar a { margin-left:auto; font-size:12.5px; color:#6aa8f0; text-decoration:none; }
+  .hide { display:none !important; }
+  /* login */
+  #gate { position:fixed; inset:0; background:#0f1117; display:flex; align-items:center; justify-content:center; padding:20px; z-index:50; }
+  .login { background:#1a1d24; border:1px solid #2a2f3a; border-radius:16px; padding:26px; width:100%; max-width:380px; text-align:center; }
+  .login .msg { font-size:13px; color:#9aa1ad; margin-top:10px; min-height:18px; }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="login">
+    <div class="kicker">Not a Bot? The Podcast</div>
+    <h1>Bot Brain 🧠</h1>
+    <p class="sub">Enter your email for a one-tap login link.</p>
+    <input id="loginEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" style="margin:14px 0;" />
+    <button class="btn primary" id="loginBtn" style="width:100%;">Send magic link</button>
+    <div class="msg" id="loginMsg"></div>
+  </div>
+</div>
+
+<div class="wrap hide" id="app">
+  <div class="topbar">
+    <div>
+      <div class="kicker">On-the-go capture</div>
+      <h1>Bot Brain 🧠</h1>
+    </div>
+    <a href="index.html">Full app →</a>
+  </div>
+  <div class="sub" id="who">—</div>
+
+  <div class="card">
+    <label>Link (article / video)</label>
+    <input id="link" type="url" inputmode="url" placeholder="Paste a URL…" />
+    <label>What is it?</label>
+    <input id="title" type="text" placeholder="Quick title or note to self…" />
+    <label>Why it matters / your take</label>
+    <textarea id="note" rows="2" placeholder="Optional — the angle, the hook…"></textarea>
+    <label>Category</label>
+    <select id="cat">
+      <option value="prod">Products &amp; Tools</option>
+      <option value="biz">Business &amp; Policy</option>
+      <option value="cult">Culture &amp; Impact</option>
+      <option value="other">Other</option>
+    </select>
+    <div class="row2">
+      <button class="btn ghost" id="addIdea">➕ To ideas</button>
+      <button class="btn primary" id="addSet">🎙️ To set list</button>
+    </div>
+  </div>
+
+  <h2>🎙️ Next episode</h2>
+  <div id="arc"></div>
+  <div id="setlist"></div>
+
+  <div style="text-align:center;margin-top:18px;"><button class="btn ghost" id="refresh" style="max-width:160px;">↻ Refresh</button></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="config.js"></script>
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+const cfg = window.BRAIN_CONFIG || {};
+const sb = createClient(cfg.SUPABASE_URL || "https://x.supabase.co", cfg.SUPABASE_ANON_KEY || "x");
+const $ = id => document.getElementById(id);
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const esc = s => (s || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const norm = s => s === "queued" ? "setlist" : s === "recorded" ? "covered" : (s || "idea");
+
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 1600); }
+
+// auth
+async function init() {
+  const { data: { session } } = await sb.auth.getSession();
+  apply(session);
+  sb.auth.onAuthStateChange((_e, s) => apply(s));
+}
+let booted = false;
+function apply(session) {
+  if (session && session.user) {
+    $("gate").classList.add("hide"); $("app").classList.remove("hide");
+    $("who").textContent = session.user.email || "";
+    if (!booted) { booted = true; load(); }
+  } else { $("app").classList.add("hide"); $("gate").classList.remove("hide"); }
+}
+$("loginBtn").onclick = async () => {
+  const email = $("loginEmail").value.trim(); if (!email) return;
+  $("loginMsg").textContent = "Sending…";
+  const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.href.split("#")[0] } });
+  $("loginMsg").textContent = error ? ("Error: " + error.message) : "Check your email ✉️";
+};
+$("loginEmail").addEventListener("keydown", e => { if (e.key === "Enter") $("loginBtn").click(); });
+
+// capture
+async function addItem(status) {
+  const link = $("link").value.trim(), title = $("title").value.trim(), note = $("note").value.trim(), cat = $("cat").value;
+  if (!link && !title) { toast("Add a link or a title"); return; }
+  const finalTitle = title || link || "(untitled)";
+  const finalNote = [link, note].filter(Boolean).join("\n");
+  const row = { id: uid(), title: finalTitle, cat, status, note: finalNote, position: status === "setlist" ? Date.now() : 0 };
+  const { error } = await sb.from("backlog").insert(row);
+  if (error) { toast("Save failed"); return; }
+  $("link").value = ""; $("title").value = ""; $("note").value = "";
+  toast(status === "setlist" ? "Added to set list ✓" : "Added to ideas ✓");
+  load();
+}
+$("addIdea").onclick = () => addItem("idea");
+$("addSet").onclick = () => addItem("setlist");
+$("refresh").onclick = load;
+
+// read views
+async function load() {
+  const [sp, bl] = await Promise.all([
+    sb.from("show_plan").select("*").eq("id", 1).maybeSingle(),
+    sb.from("backlog").select("*")
+  ]);
+  const plan = sp.data || { working_title: "", arc: "" };
+  const arc = $("arc");
+  arc.innerHTML = `
+    <div class="card">
+      <div class="arc-title">${plan.working_title ? esc(plan.working_title) : "<span class='muted'>No working title yet</span>"}</div>
+      ${plan.arc ? `<div class="arc-body">${esc(plan.arc)}</div>` : `<div class="muted" style="margin-top:4px;">No arc/tone notes yet — set them on the full app.</div>`}
+    </div>`;
+  const items = (bl.data || []).filter(x => norm(x.status) === "setlist").sort((a, b) => (a.position || 0) - (b.position || 0));
+  const host = $("setlist");
+  if (!items.length) { host.innerHTML = `<div class="muted">Set list is empty. Add something above.</div>`; return; }
+  host.innerHTML = items.map(x => `
+    <div class="setitem">
+      <div class="t">${esc(x.title)}</div>
+      ${x.note ? `<div class="n">${esc(x.note)}</div>` : ``}
+    </div>`).join("");
+}
+
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(() => {}); }
+init();
+</script>
+</body>
+</html>

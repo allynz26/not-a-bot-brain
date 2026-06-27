@@ -150,14 +150,50 @@ async function moveToSetList(x) {
   await updateIdea(x, { status: "setlist", position: maxPos + 1 });
 }
 
+// Stale aging: an idea (never set-listed) untouched for STALE_DAYS is flagged, hidden from default view.
+const STALE_DAYS = 45;
+function ageDays(x) { const t = new Date(x.updated_at || x.created_at || Date.now()).getTime(); return (Date.now() - t) / 86400000; }
+function isStale(x) { return normStatus(x.status) === "idea" && ageDays(x) > STALE_DAYS; }
+async function keepIdea(x) { x.updated_at = new Date().toISOString(); render(); await sb.from("backlog").update({ updated_at: x.updated_at }).eq("id", x.id); }
+async function clearAllStale() {
+  const st = backlog.filter(isStale); if (!st.length) return;
+  if (!confirm(`Clear ${st.length} stale idea${st.length > 1 ? "s" : ""}? This permanently deletes them.`)) return;
+  const ids = st.map(i => i.id); backlog = backlog.filter(i => !ids.includes(i.id)); render();
+  await sb.from("backlog").delete().in("id", ids);
+}
+
 function render() {
   const list = $("list"); list.innerHTML = "";
-  const shown = backlog.filter(x => filter === "all" || normStatus(x.status) === filter);
-  if (!shown.length) { list.innerHTML = `<div class="empty">No ideas yet${filter !== "all" ? " in this view" : ""}. Add one above, or pull from this week's angles ↑</div>`; renderSetList(); return; }
+  const shown = backlog.filter(x => {
+    const st = normStatus(x.status), stale = st === "idea" && isStale(x);
+    if (filter === "stale") return stale;
+    if (filter === "all") return !stale;
+    if (filter === "idea") return st === "idea" && !stale;
+    return st === filter;
+  });
+  const staleTotal = backlog.filter(isStale).length;
+  const staleChip = document.querySelector('#filters .chip[data-f="stale"]');
+  if (staleChip) staleChip.textContent = staleTotal ? `🥀 Stale (${staleTotal})` : "🥀 Stale";
+  if (filter === "stale" && shown.length) {
+    const bar = document.createElement("div");
+    bar.style.cssText = "display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;";
+    bar.innerHTML = `<span style="font-size:12.5px;color:#8b93a1;">Untouched for ${STALE_DAYS}+ days. Keep the keepers; clear the rest.</span>`;
+    const b = document.createElement("button"); b.className = "btn ghost"; b.style.cssText = "padding:6px 12px;font-size:12.5px;";
+    b.textContent = `🗑 Clear all stale (${shown.length})`; b.onclick = clearAllStale; bar.appendChild(b);
+    list.appendChild(bar);
+  }
+  if (!shown.length) {
+    const e = document.createElement("div"); e.className = "empty";
+    e.textContent = filter === "stale" ? "No stale ideas — your pool is fresh. 🌱" : `No ideas yet${filter !== "all" ? " in this view" : ""}. Add one above, or pull from this week's angles ↑`;
+    list.appendChild(e); renderSetList(); return;
+  }
   shown.forEach(x => {
     const st = normStatus(x.status);
+    const stale = st === "idea" && isStale(x);
     const row = document.createElement("div"); row.className = "idea";
-    const quick = st === "idea"
+    const quick = stale
+      ? `<button class="btn ghost" data-act="keep" style="padding:5px 10px;font-size:12px;">↻ Keep</button>`
+      : st === "idea"
       ? `<button class="btn ghost" data-act="toset" style="padding:5px 10px;font-size:12px;">🎙️ Set list</button>`
       : st === "setlist"
       ? `<button class="btn ghost" data-act="covered" style="padding:5px 10px;font-size:12px;">✅ Covered</button>`
@@ -167,6 +203,7 @@ function render() {
         <div class="titlerow">
           <span class="tag ${x.cat}">${CAT_LABEL[x.cat] || "Other"}</span>
           <span class="status ${st}" data-act="status">${STATUS_LABEL[st]}</span>
+          ${stale ? `<span class="status" style="color:#caa05a;border-color:#5a4a2e;background:#221d14;cursor:default;">🥀 stale</span>` : ``}
           <span class="ttl">${esc(x.title)}</span>
         </div>
         ${x.note ? `<div class="note">${esc(x.note)}</div>` : ``}
@@ -175,6 +212,7 @@ function render() {
       <button class="iconbtn" data-act="edit" title="Edit">✎</button>
       <button class="iconbtn" data-act="del" title="Delete">✕</button>`;
     row.querySelector('[data-act="status"]').onclick = () => updateIdea(x, { status: STATUS_CYCLE[st] });
+    const qk = row.querySelector('[data-act="keep"]'); if (qk) qk.onclick = () => keepIdea(x);
     const qt = row.querySelector('[data-act="toset"]'); if (qt) qt.onclick = () => moveToSetList(x);
     const qc = row.querySelector('[data-act="covered"]'); if (qc) qc.onclick = () => updateIdea(x, { status: "covered" });
     const qi = row.querySelector('[data-act="toidea"]'); if (qi) qi.onclick = () => updateIdea(x, { status: "idea" });
