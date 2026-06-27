@@ -10,6 +10,7 @@ const sb = createClient(cfg.SUPABASE_URL || "https://placeholder.supabase.co", c
 let backlog = [], episodes = [], voice = [], roundup = {}, weekOf = "";
 let showPlan = { working_title: "", arc: "" };
 let conspiracies = [];
+let posts = [];
 let filter = "all", vfilter = "all";
 
 const $ = (id) => document.getElementById(id);
@@ -50,13 +51,14 @@ async function bootData() {
   subscribe();
 }
 async function loadAll() {
-  const [b, e, v, r, sp, cc] = await Promise.all([
+  const [b, e, v, r, sp, cc, pp] = await Promise.all([
     sb.from("backlog").select("*"),
     sb.from("episodes").select("*"),
     sb.from("voice").select("*"),
     sb.from("roundup").select("*").eq("id", 1).maybeSingle(),
     sb.from("show_plan").select("*").eq("id", 1).maybeSingle(),
-    sb.from("conspiracies").select("*")
+    sb.from("conspiracies").select("*"),
+    sb.from("posts").select("*")
   ]);
   backlog = (b.data || []).sort(byNewest);
   episodes = (e.data || []).sort(byNewest);
@@ -64,7 +66,8 @@ async function loadAll() {
   if (r.data) { roundup = r.data.data || {}; weekOf = r.data.week_of || ""; }
   if (sp.data) showPlan = { working_title: sp.data.working_title || "", arc: sp.data.arc || "" };
   conspiracies = (cc.data || []).sort(byNewest);
-  renderRoundup(); render(); renderE(); renderV(); renderShowPlan(); renderConspiracies(); setWeek();
+  posts = (pp.data || []).sort(byNewest);
+  renderRoundup(); render(); renderE(); renderV(); renderShowPlan(); renderConspiracies(); renderPosts(); setWeek();
 }
 function byNewest(a, b) { return new Date(b.created_at || 0) - new Date(a.created_at || 0); }
 
@@ -75,11 +78,12 @@ function subscribe() {
     .on("postgres_changes", { event: "*", schema: "public", table: "voice" }, p => applyChange("voice", p))
     .on("postgres_changes", { event: "*", schema: "public", table: "roundup" }, p => { roundup = (p.new && p.new.data) || roundup; weekOf = (p.new && p.new.week_of) || weekOf; renderRoundup(); setWeek(); })
     .on("postgres_changes", { event: "*", schema: "public", table: "conspiracies" }, p => applyChange("conspiracies", p))
+    .on("postgres_changes", { event: "*", schema: "public", table: "posts" }, p => applyChange("posts", p))
     .on("postgres_changes", { event: "*", schema: "public", table: "show_plan" }, p => { if (p.new) { showPlan = { working_title: p.new.working_title || "", arc: p.new.arc || "" }; renderShowPlan(); } })
     .subscribe();
 }
 function applyChange(table, p) {
-  const arrMap = { backlog, episodes, voice, conspiracies };
+  const arrMap = { backlog, episodes, voice, conspiracies, posts };
   let arr = arrMap[table];
   if (p.eventType === "DELETE") { arr = arr.filter(x => x.id !== p.old.id); }
   else { arr = arr.filter(x => x.id !== p.new.id); arr.unshift(p.new); arr.sort(byNewest); }
@@ -87,6 +91,7 @@ function applyChange(table, p) {
   else if (table === "episodes") { episodes = arr; renderE(); }
   else if (table === "voice") { voice = arr; renderV(); }
   else if (table === "conspiracies") { conspiracies = arr; renderConspiracies(); }
+  else if (table === "posts") { posts = arr; renderPosts(); }
 }
 
 // ---------- Roundup (weekly talking points) ----------
@@ -366,6 +371,56 @@ document.querySelectorAll("#filters .chip").forEach(c => c.onclick = () => { doc
 $("wrapBtn").onclick = wrapEpisode;
 $("ccAdd").onclick = () => { addConspiracy($("ccTitle").value); $("ccTitle").value = ""; };
 $("ccTitle").addEventListener("keydown", e => { if (e.key === "Enter") $("ccAdd").click(); });
+$("postNew").onclick = newPost;
+
+// ---------- Blog admin ----------
+const POST_STATUS = { draft: "📝 draft", published: "✅ published" };
+function slugify(s) { return (s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60); }
+async function newPost() {
+  const row = { id: uid(), episode_id: "", title: "Untitled post", slug: "", dek: "", body: "", status: "draft" };
+  posts.unshift({ ...row, created_at: new Date().toISOString() }); renderPosts();
+  await sb.from("posts").insert(row);
+}
+async function updatePost(p, patch) {
+  Object.assign(p, patch); renderPosts();
+  await sb.from("posts").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", p.id);
+}
+async function togglePublish(p) {
+  const pub = p.status !== "published";
+  await updatePost(p, { status: pub ? "published" : "draft", published_at: pub ? (p.published_at || new Date().toISOString()) : p.published_at, slug: p.slug || slugify(p.title) });
+}
+function renderPosts() {
+  const host = $("postList"); if (!host) return; host.innerHTML = "";
+  if (!posts.length) { host.innerHTML = `<div class="empty">No posts yet. Click "New draft," or ask Claude to write one from an episode.</div>`; return; }
+  posts.forEach(p => {
+    const row = document.createElement("div"); row.className = "idea";
+    row.innerHTML = `
+      <div class="body">
+        <div class="titlerow">
+          <span class="status ${p.status === 'published' ? 'covered' : 'idea'}" data-act="pub" title="Toggle publish">${POST_STATUS[p.status] || POST_STATUS.draft}</span>
+          <span class="ttl">${esc(p.title)}</span>
+        </div>
+        ${p.dek ? `<div class="note">${esc(p.dek)}</div>` : ``}
+        ${p.status === 'published' ? `<div class="src" style="margin-top:6px;"><a href="blog.html?post=${encodeURIComponent(p.id)}" target="_blank" rel="noopener">view on blog ↗</a></div>` : ``}
+      </div>
+      <button class="iconbtn" data-act="edit" title="Edit">✎</button>
+      <button class="iconbtn" data-act="del" title="Delete">✕</button>`;
+    row.querySelector('[data-act="pub"]').onclick = () => togglePublish(p);
+    row.querySelector('[data-act="del"]').onclick = () => { if (confirm("Delete this post?")) deleteRow("posts", p.id, posts, renderPosts); };
+    row.querySelector('[data-act="edit"]').onclick = () => {
+      const body = row.querySelector(".body");
+      body.innerHTML = `
+        <input class="edit" value="${esc(p.title)}" placeholder="Title" />
+        <input class="edit" style="margin-top:6px" value="${esc(p.dek)}" placeholder="Dek / subtitle" />
+        <textarea rows="12" style="margin-top:6px" placeholder="Body (markdown: ## heading, **bold**, - list, > quote)">${esc(p.body)}</textarea>
+        <div style="margin-top:8px;display:flex;gap:8px;"><button class="btn" data-s="save">Save</button><button class="btn ghost" data-s="cancel">Cancel</button></div>`;
+      const ins = body.querySelectorAll("input.edit");
+      body.querySelector('[data-s="save"]').onclick = () => updatePost(p, { title: ins[0].value.trim() || p.title, dek: ins[1].value, body: body.querySelector("textarea").value });
+      body.querySelector('[data-s="cancel"]').onclick = renderPosts;
+    };
+    host.appendChild(row);
+  });
+}
 
 // ---------- Voice ----------
 const VKIND = { take: { label: "🔥 Hot take", cls: "cult" }, belief: { label: "🧭 Core belief", cls: "biz" }, question: { label: "❓ Open question", cls: "prod" }, story: { label: "📖 Story", cls: "other" }, line: { label: "🎤 One-liner", cls: "cult" } };

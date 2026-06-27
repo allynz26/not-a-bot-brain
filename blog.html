@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Not a Bot? — The Blog</title>
+<meta name="theme-color" content="#0f1117" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; background:#0f1117; color:#e6e7ea; line-height:1.65; }
+  .wrap { max-width:720px; margin:0 auto; padding:32px 20px 80px; }
+  .kicker { font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#f0a23c; font-weight:700; }
+  .mast h1 { font-size:30px; margin:6px 0 2px; letter-spacing:-.02em; }
+  .mast .sub { color:#9aa1ad; font-size:14px; }
+  .mast { border-bottom:1px solid #2a2f3a; padding-bottom:18px; margin-bottom:24px; }
+  a { color:#6aa8f0; }
+  .post-card { display:block; text-decoration:none; color:inherit; background:#1a1d24; border:1px solid #2a2f3a; border-radius:14px; padding:18px 20px; margin-bottom:14px; }
+  .post-card:hover { border-color:#3a4250; }
+  .post-card h2 { font-size:20px; margin:0 0 6px; color:#e6e7ea; }
+  .post-card .dek { color:#b6bcc6; font-size:14.5px; }
+  .post-card .date { color:#7c828d; font-size:12px; margin-top:8px; }
+  .empty { color:#8b93a1; text-align:center; padding:60px 20px; }
+  /* article */
+  article h1 { font-size:30px; line-height:1.2; letter-spacing:-.02em; margin:6px 0 6px; }
+  article .dek { color:#b6bcc6; font-size:17px; margin-bottom:6px; }
+  article .date { color:#7c828d; font-size:13px; margin-bottom:24px; }
+  article h2 { font-size:22px; margin:28px 0 8px; }
+  article h3 { font-size:18px; margin:22px 0 6px; }
+  article p { margin:0 0 16px; font-size:16.5px; }
+  article ul { margin:0 0 16px; padding-left:22px; }
+  article li { margin:4px 0; }
+  article blockquote { margin:0 0 16px; padding:8px 16px; border-left:3px solid #f0a23c; background:#1a1d24; border-radius:0 8px 8px 0; color:#e9d3b3; font-style:italic; }
+  .back { display:inline-block; margin-bottom:18px; font-size:14px; }
+  footer { margin-top:48px; padding-top:18px; border-top:1px solid #2a2f3a; font-size:12px; color:#6c7280; text-align:center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="mast">
+    <div class="kicker">Not a Bot? The Podcast</div>
+    <h1>The Blog 🧠</h1>
+    <div class="sub">Notes, debates, and absurd theories from the human/machine boundary — with Zane &amp; Greg.</div>
+  </div>
+  <div id="content"><div class="empty">Loading…</div></div>
+  <footer>Not a Bot? The Podcast · written with help from the Brain</footer>
+</div>
+
+<script src="config.js"></script>
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+const cfg = window.BRAIN_CONFIG || {};
+const sb = createClient(cfg.SUPABASE_URL || "https://x.supabase.co", cfg.SUPABASE_ANON_KEY || "x");
+const content = document.getElementById("content");
+const esc = s => (s || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fmtDate = d => { try { return new Date(d).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }); } catch (e) { return ""; } };
+
+function inline(t) {
+  return esc(t)
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/(^|[^*])\*([^*]+)\*/g, "$1<em>$2</em>")
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+}
+function mdToHtml(md) {
+  const blocks = (md || "").replace(/\r/g, "").split(/\n{2,}/);
+  return blocks.map(b => {
+    const lines = b.split("\n");
+    if (/^###\s/.test(b)) return `<h3>${inline(b.replace(/^###\s/, ""))}</h3>`;
+    if (/^##\s/.test(b)) return `<h2>${inline(b.replace(/^##\s/, ""))}</h2>`;
+    if (/^#\s/.test(b)) return `<h2>${inline(b.replace(/^#\s/, ""))}</h2>`;
+    if (lines.every(l => /^>\s?/.test(l))) return `<blockquote>${inline(lines.map(l => l.replace(/^>\s?/, "")).join(" "))}</blockquote>`;
+    if (lines.every(l => /^[-*]\s/.test(l))) return `<ul>${lines.map(l => `<li>${inline(l.replace(/^[-*]\s/, ""))}</li>`).join("")}</ul>`;
+    return `<p>${lines.map(inline).join("<br>")}</p>`;
+  }).join("\n");
+}
+
+async function render() {
+  const params = new URLSearchParams(location.search);
+  const id = params.get("post");
+  if (id) {
+    const { data } = await sb.from("posts").select("*").eq("id", id).eq("status", "published").maybeSingle();
+    if (!data) { content.innerHTML = `<a class="back" href="blog.html">← All posts</a><div class="empty">Post not found or not published.</div>`; return; }
+    content.innerHTML = `
+      <a class="back" href="blog.html">← All posts</a>
+      <article>
+        <h1>${esc(data.title)}</h1>
+        ${data.dek ? `<div class="dek">${esc(data.dek)}</div>` : ``}
+        <div class="date">${fmtDate(data.published_at || data.created_at)}</div>
+        ${mdToHtml(data.body)}
+      </article>`;
+    document.title = data.title + " · Not a Bot?";
+    return;
+  }
+  const { data } = await sb.from("posts").select("*").eq("status", "published").order("published_at", { ascending: false });
+  const posts = data || [];
+  if (!posts.length) { content.innerHTML = `<div class="empty">No posts yet — check back after the next episode.</div>`; return; }
+  content.innerHTML = posts.map(p => `
+    <a class="post-card" href="blog.html?post=${encodeURIComponent(p.id)}">
+      <h2>${esc(p.title)}</h2>
+      ${p.dek ? `<div class="dek">${esc(p.dek)}</div>` : ``}
+      <div class="date">${fmtDate(p.published_at || p.created_at)}</div>
+    </a>`).join("");
+}
+render();
+</script>
+</body>
+</html>
