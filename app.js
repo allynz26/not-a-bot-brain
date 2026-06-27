@@ -8,6 +8,8 @@ const sb = createClient(cfg.SUPABASE_URL || "https://placeholder.supabase.co", c
 
 // ---------- State ----------
 let backlog = [], episodes = [], voice = [], roundup = {}, weekOf = "";
+let showPlan = { working_title: "", arc: "" };
+let conspiracies = [];
 let filter = "all", vfilter = "all";
 
 const $ = (id) => document.getElementById(id);
@@ -48,17 +50,21 @@ async function bootData() {
   subscribe();
 }
 async function loadAll() {
-  const [b, e, v, r] = await Promise.all([
+  const [b, e, v, r, sp, cc] = await Promise.all([
     sb.from("backlog").select("*"),
     sb.from("episodes").select("*"),
     sb.from("voice").select("*"),
-    sb.from("roundup").select("*").eq("id", 1).maybeSingle()
+    sb.from("roundup").select("*").eq("id", 1).maybeSingle(),
+    sb.from("show_plan").select("*").eq("id", 1).maybeSingle(),
+    sb.from("conspiracies").select("*")
   ]);
   backlog = (b.data || []).sort(byNewest);
   episodes = (e.data || []).sort(byNewest);
   voice = (v.data || []).sort(byNewest);
   if (r.data) { roundup = r.data.data || {}; weekOf = r.data.week_of || ""; }
-  renderRoundup(); render(); renderE(); renderV(); setWeek();
+  if (sp.data) showPlan = { working_title: sp.data.working_title || "", arc: sp.data.arc || "" };
+  conspiracies = (cc.data || []).sort(byNewest);
+  renderRoundup(); render(); renderE(); renderV(); renderShowPlan(); renderConspiracies(); setWeek();
 }
 function byNewest(a, b) { return new Date(b.created_at || 0) - new Date(a.created_at || 0); }
 
@@ -68,16 +74,19 @@ function subscribe() {
     .on("postgres_changes", { event: "*", schema: "public", table: "episodes" }, p => applyChange("episodes", p))
     .on("postgres_changes", { event: "*", schema: "public", table: "voice" }, p => applyChange("voice", p))
     .on("postgres_changes", { event: "*", schema: "public", table: "roundup" }, p => { roundup = (p.new && p.new.data) || roundup; weekOf = (p.new && p.new.week_of) || weekOf; renderRoundup(); setWeek(); })
+    .on("postgres_changes", { event: "*", schema: "public", table: "conspiracies" }, p => applyChange("conspiracies", p))
+    .on("postgres_changes", { event: "*", schema: "public", table: "show_plan" }, p => { if (p.new) { showPlan = { working_title: p.new.working_title || "", arc: p.new.arc || "" }; renderShowPlan(); } })
     .subscribe();
 }
 function applyChange(table, p) {
-  const arrMap = { backlog, episodes, voice };
+  const arrMap = { backlog, episodes, voice, conspiracies };
   let arr = arrMap[table];
   if (p.eventType === "DELETE") { arr = arr.filter(x => x.id !== p.old.id); }
   else { arr = arr.filter(x => x.id !== p.new.id); arr.unshift(p.new); arr.sort(byNewest); }
   if (table === "backlog") { backlog = arr; render(); }
   else if (table === "episodes") { episodes = arr; renderE(); }
   else if (table === "voice") { voice = arr; renderV(); }
+  else if (table === "conspiracies") { conspiracies = arr; renderConspiracies(); }
 }
 
 // ---------- Roundup (weekly talking points) ----------
@@ -216,8 +225,9 @@ function renderSetList() {
         <div class="titlerow">
           <span class="tag ${x.cat}">${CAT_LABEL[x.cat] || "Other"}</span>
           <span class="ttl">${esc(x.title)}</span>
+          <button class="seedbtn" data-act="editnote">✎ ${x.note ? "edit notes" : "add notes / your take"}</button>
         </div>
-        ${x.note ? `<div class="note">${esc(x.note)}</div>` : ``}
+        <div data-noteslot>${x.note ? `<div class="note">${esc(x.note)}</div>` : ``}</div>
       </div>
       <button class="btn ghost" data-act="covered" style="padding:5px 10px;font-size:12px;">✅ Covered</button>
       <button class="iconbtn" data-act="toidea" title="Back to ideas">↩</button>`;
@@ -225,6 +235,14 @@ function renderSetList() {
     row.querySelector('[data-act="down"]').onclick = () => reorderSetList(x, 1);
     row.querySelector('[data-act="covered"]').onclick = () => updateIdea(x, { status: "covered" });
     row.querySelector('[data-act="toidea"]').onclick = () => updateIdea(x, { status: "idea" });
+    row.querySelector('[data-act="editnote"]').onclick = () => {
+      const slot = row.querySelector("[data-noteslot]");
+      slot.innerHTML = `<textarea rows="3" placeholder="Flesh out your take, the angle, where you and Greg land…">${esc(x.note)}</textarea>
+        <div style="margin-top:6px;display:flex;gap:8px;"><button class="btn" data-s="save">Save</button><button class="btn ghost" data-s="cancel">Cancel</button></div>`;
+      slot.querySelector("textarea").focus();
+      slot.querySelector('[data-s="save"]').onclick = () => updateIdea(x, { note: slot.querySelector("textarea").value });
+      slot.querySelector('[data-s="cancel"]').onclick = renderSetList;
+    };
     host.appendChild(row);
   });
 }
@@ -243,10 +261,73 @@ async function wrapEpisode() {
   await sb.from("backlog").update({ status: "covered", updated_at: new Date().toISOString() }).in("id", items.map(i => i.id));
   alert(`Wrapped "${ep.title}" → added to your Episode archive with ${items.length} topic${items.length > 1 ? "s" : ""}.`);
 }
+
+// ---------- Episode arc / tone planner ----------
+async function saveShowPlan(patch) {
+  Object.assign(showPlan, patch);
+  await sb.from("show_plan").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", 1);
+}
+function renderShowPlan() {
+  const t = $("planTitle"), a = $("planArc");
+  if (!t || !a) return;
+  if (document.activeElement !== t) t.value = showPlan.working_title || "";
+  if (document.activeElement !== a) a.value = showPlan.arc || "";
+  t.onchange = () => saveShowPlan({ working_title: t.value });
+  a.onchange = () => saveShowPlan({ arc: a.value });
+}
+
+// ---------- Conspiracy Corner ----------
+const CC_STATUS = { developing: "🧪 developing", ready: "🎙️ ready" };
+async function addConspiracy(title) {
+  if (!title || !title.trim()) return;
+  const row = { id: uid(), title: title.trim(), body: "", kernel: "", status: "developing" };
+  conspiracies.unshift({ ...row, created_at: new Date().toISOString() }); renderConspiracies();
+  await sb.from("conspiracies").insert(row);
+}
+async function updateConspiracy(c, patch) {
+  Object.assign(c, patch); renderConspiracies();
+  await sb.from("conspiracies").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", c.id);
+}
+function renderConspiracies() {
+  const host = $("conspList"); if (!host) return;
+  host.innerHTML = "";
+  if (!conspiracies.length) { host.innerHTML = `<div class="empty">No theories yet. Drop an absurd premise above and develop it into a bit.</div>`; return; }
+  conspiracies.forEach(c => {
+    const row = document.createElement("div"); row.className = "idea";
+    row.innerHTML = `
+      <div class="body">
+        <div class="titlerow">
+          <span class="status ${c.status === 'ready' ? 'covered' : 'idea'}" data-act="status">${CC_STATUS[c.status] || CC_STATUS.developing}</span>
+          <span class="ttl">🛸 ${esc(c.title)}</span>
+        </div>
+        ${c.body ? `<div class="note">${esc(c.body)}</div>` : ``}
+        ${c.kernel ? `<div class="angle" style="margin-top:6px;"><b>The kernel:</b> ${esc(c.kernel)}</div>` : ``}
+      </div>
+      <button class="iconbtn" data-act="edit" title="Edit">✎</button>
+      <button class="iconbtn" data-act="del" title="Delete">✕</button>`;
+    row.querySelector('[data-act="status"]').onclick = () => updateConspiracy(c, { status: c.status === 'ready' ? 'developing' : 'ready' });
+    row.querySelector('[data-act="del"]').onclick = () => { if (confirm("Delete this theory?")) deleteRow("conspiracies", c.id, conspiracies, renderConspiracies); };
+    row.querySelector('[data-act="edit"]').onclick = () => {
+      const body = row.querySelector(".body");
+      body.innerHTML = `
+        <input class="edit" value="${esc(c.title)}" placeholder="Title" />
+        <textarea rows="5" style="margin-top:6px" placeholder="The bit — the absurd premise + connect-the-dots…">${esc(c.body)}</textarea>
+        <textarea rows="2" style="margin-top:6px" placeholder="The kernel — the real, thought-provoking point underneath">${esc(c.kernel)}</textarea>
+        <div style="margin-top:8px;display:flex;gap:8px;"><button class="btn" data-s="save">Save</button><button class="btn ghost" data-s="cancel">Cancel</button></div>`;
+      const ins = body.querySelector("input.edit");
+      const tas = body.querySelectorAll("textarea");
+      body.querySelector('[data-s="save"]').onclick = () => updateConspiracy(c, { title: ins.value.trim() || c.title, body: tas[0].value, kernel: tas[1].value });
+      body.querySelector('[data-s="cancel"]').onclick = renderConspiracies;
+    };
+    host.appendChild(row);
+  });
+}
 $("addBtn").onclick = () => { addIdea($("newTitle").value, $("newCat").value, ""); $("newTitle").value = ""; };
 $("newTitle").addEventListener("keydown", e => { if (e.key === "Enter") $("addBtn").click(); });
 document.querySelectorAll("#filters .chip").forEach(c => c.onclick = () => { document.querySelectorAll("#filters .chip").forEach(z => z.classList.remove("on")); c.classList.add("on"); filter = c.dataset.f; render(); });
 $("wrapBtn").onclick = wrapEpisode;
+$("ccAdd").onclick = () => { addConspiracy($("ccTitle").value); $("ccTitle").value = ""; };
+$("ccTitle").addEventListener("keydown", e => { if (e.key === "Enter") $("ccAdd").click(); });
 
 // ---------- Voice ----------
 const VKIND = { take: { label: "🔥 Hot take", cls: "cult" }, belief: { label: "🧭 Core belief", cls: "biz" }, question: { label: "❓ Open question", cls: "prod" }, story: { label: "📖 Story", cls: "other" }, line: { label: "🎤 One-liner", cls: "cult" } };

@@ -122,6 +122,11 @@
     <span id="setCount" style="font-size:12px;color:#9a958e;"></span>
     <button class="btn" id="wrapBtn" type="button" style="margin-left:auto;padding:8px 14px;font-size:13px;">✅ Wrap episode → archive</button>
   </div>
+  <div style="background:#1a1d24;border:1px solid #2a2f3a;border-radius:12px;padding:14px;margin-bottom:16px;">
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#8b93a1;font-weight:700;margin-bottom:8px;">Episode arc &amp; tone</div>
+    <input id="planTitle" type="text" placeholder="Working title for the next episode…" style="width:100%;padding:10px 12px;border:1px solid #333a45;border-radius:10px;font-size:14px;margin-bottom:8px;background:#14161c;color:#e6e7ea;" />
+    <textarea id="planArc" rows="3" placeholder="How should this episode feel? The throughline, the energy, where it opens and where it lands — the stuff that makes it a show, not a list." style="width:100%;border:1px solid #333a45;border-radius:10px;padding:10px;font-size:13.5px;font-family:inherit;background:#14161c;color:#e6e7ea;"></textarea>
+  </div>
   <div id="setList"></div>
 
   <h2 class="sec">Episode archive — what we've covered</h2>
@@ -154,6 +159,14 @@
     <span class="chip" data-vf="line">🎤 Lines</span>
   </div>
   <div id="voiceList"></div>
+
+  <h2 class="sec">🛸 Conspiracy corner — provoking by absurdity</h2>
+  <div style="font-size:13px;color:#9aa1ad;margin-bottom:10px;">Zane's bit: a joke and a gut-punch. Absurd premise on top, a real <em>kernel</em> of truth underneath. Flip a theory to 🎙️ ready when it's air-tight (absurdly).</div>
+  <div class="addrow">
+    <input id="ccTitle" type="text" placeholder="New theory title… e.g. 'Loading Bars Are a Loyalty Program'" />
+    <button class="btn" id="ccAdd" type="button">Add</button>
+  </div>
+  <div id="conspList"></div>
 
   <footer>Not a Bot Brain · Supabase + GitHub Pages · realtime, shared by Zane &amp; Greg</footer>
 </div>
