@@ -186,8 +186,17 @@
   <div id="conspList"></div>
 
   <h2 class="sec">📝 Blog — show write-ups</h2>
-  <div style="font-size:13px;color:#9aa1ad;margin-bottom:10px;">Drafts &amp; published posts. Ask Claude to "draft a blog post from [episode]" — paste a transcript for the richest version — then review and flip to ✅ published. <a href="blog.html" target="_blank" rel="noopener" style="color:#6aa8f0;">View public blog →</a></div>
-  <div style="margin-bottom:12px;"><button class="btn" id="postNew" type="button">✍️ New draft</button></div>
+  <div style="font-size:13px;color:#9aa1ad;margin-bottom:10px;">Paste an episode transcript to generate a draft in your voice, or write one yourself. Review, then flip to ✅ published. <a href="blog.html" target="_blank" rel="noopener" style="color:#6aa8f0;">View public blog →</a></div>
+  <div style="background:#1a1d24;border:1px solid #2a2f3a;border-radius:12px;padding:14px;margin-bottom:16px;">
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#8b93a1;font-weight:700;margin-bottom:8px;">✨ Generate from transcript</div>
+    <select id="genTarget" style="width:100%;padding:10px;border:1px solid #333a45;border-radius:10px;font-size:13.5px;background:#14161c;color:#e6e7ea;margin-bottom:8px;"></select>
+    <textarea id="genTranscript" rows="5" placeholder="Paste the full episode transcript here (YouTube or Riverside)…" style="width:100%;border:1px solid #333a45;border-radius:10px;padding:10px;font-size:13.5px;font-family:inherit;background:#14161c;color:#e6e7ea;"></textarea>
+    <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <button class="btn" id="genBtn" type="button">✨ Generate draft</button>
+      <button class="btn ghost" id="postNew" type="button">✍️ Blank draft</button>
+      <span id="genStatus" style="font-size:12.5px;color:#8b93a1;"></span>
+    </div>
+  </div>
   <div id="postList"></div>
 
   <footer>Not a Bot Brain · Supabase + GitHub Pages · realtime, shared by Zane &amp; Greg</footer>

@@ -302,7 +302,11 @@ async function wrapEpisode() {
   for (const x of items) { x.status = "covered"; }
   renderSetList(); render();
   await sb.from("backlog").update({ status: "covered", updated_at: new Date().toISOString() }).in("id", items.map(i => i.id));
-  alert(`Wrapped "${ep.title}" → added to your Episode archive with ${items.length} topic${items.length > 1 ? "s" : ""}.`);
+  // Auto-create a placeholder blog draft to fill in with the transcript.
+  const ph = { id: "post_" + uid(), episode_id: ep.id, title: ep.title, dek: "Draft — paste the transcript into the Blog generator above to write this up.".replace(/—/g, "-"), body: "", status: "draft" };
+  posts.unshift({ ...ph, created_at: new Date().toISOString() }); renderPosts();
+  await sb.from("posts").insert(ph);
+  alert(`Wrapped "${ep.title}". Added to your Episode archive (${items.length} topic${items.length > 1 ? "s" : ""}) and created a blog draft. Paste the transcript into the Blog generator and pick "Into draft: ${ep.title}" to write it up.`);
 }
 
 // ---------- Episode arc / tone planner ----------
@@ -372,9 +376,39 @@ $("wrapBtn").onclick = wrapEpisode;
 $("ccAdd").onclick = () => { addConspiracy($("ccTitle").value); $("ccTitle").value = ""; };
 $("ccTitle").addEventListener("keydown", e => { if (e.key === "Enter") $("ccAdd").click(); });
 $("postNew").onclick = newPost;
+$("genBtn").onclick = generatePost;
 
 // ---------- Blog admin ----------
 const POST_STATUS = { draft: "📝 draft", published: "✅ published" };
+function renderGenTarget() {
+  const sel = $("genTarget"); if (!sel) return;
+  const cur = sel.value;
+  const drafts = posts.filter(p => p.status !== "published");
+  sel.innerHTML = `<option value="">Create new post</option>` + drafts.map(p => `<option value="${esc(p.id)}">Into draft: ${esc(p.title)}</option>`).join("");
+  if (cur) sel.value = cur;
+}
+async function generatePost() {
+  const t = $("genTranscript").value.trim();
+  if (t.length < 50) { $("genStatus").textContent = "Paste a longer transcript first."; return; }
+  const target = $("genTarget").value;
+  $("genStatus").textContent = "Generating… this can take ~30s.";
+  $("genBtn").disabled = true;
+  try {
+    const { data, error } = await sb.functions.invoke("generate-post", { body: { transcript: t, postId: target || null } });
+    if (error) {
+      let msg = error.message || "request failed";
+      try { const b = await error.context.json(); if (b && b.error) msg = b.error; } catch (_e) {}
+      $("genStatus").textContent = "Failed: " + msg;
+    } else if (data && data.error) {
+      $("genStatus").textContent = "Failed: " + data.error;
+    } else {
+      $("genStatus").textContent = "Draft created ✓ review it below.";
+      $("genTranscript").value = "";
+      await loadAll();
+    }
+  } catch (e) { $("genStatus").textContent = "Failed: " + (e.message || e); }
+  $("genBtn").disabled = false;
+}
 function slugify(s) { return (s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60); }
 async function newPost() {
   const row = { id: uid(), episode_id: "", title: "Untitled post", slug: "", dek: "", body: "", status: "draft" };
@@ -390,6 +424,7 @@ async function togglePublish(p) {
   await updatePost(p, { status: pub ? "published" : "draft", published_at: pub ? (p.published_at || new Date().toISOString()) : p.published_at, slug: p.slug || slugify(p.title) });
 }
 function renderPosts() {
+  renderGenTarget();
   const host = $("postList"); if (!host) return; host.innerHTML = "";
   if (!posts.length) { host.innerHTML = `<div class="empty">No posts yet. Click "New draft," or ask Claude to write one from an episode.</div>`; return; }
   posts.forEach(p => {
